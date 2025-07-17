@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controlar bombillo </title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #212437 40%, #3a86ff 100%);
+      color: #fff;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: rgba(34, 40, 49, 0.97);
+      border-radius: 1.5rem;
+      box-shadow: 0 6px 32px 0 rgba(0,0,0,0.25);
+      padding: 2.2rem 3.2rem 2.5rem 3.2rem;
+      text-align: center;
+    }
+    h2 {
+      font-size: 2.2em;
+      margin-bottom: 0.6em;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .notification {
+      display: none;
+      font-weight: 500;
+      font-size: 1.04em;
+      color: #fff;
+      background: #06d6a0;
+      padding: 1em 2em;
+      border-radius: 1.2em;
+      margin-bottom: 1em;
+      box-shadow: 0 4px 16px 0 rgba(6,214,160,0.17);
+      animation: fadein 0.4s;
+    }
+    @keyframes fadein {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .led-img {
+      margin: 1.6em 0 1.8em 0;
+      display: flex;
+      justify-content: center;
+    }
+    .bulb {
+      width: 72px;
+      height: 92px;
+      transition: filter 0.3s;
+      filter: drop-shadow(0 0 16px #ffe25999);
+    }
+    .bulb.off {
+      filter: grayscale(0.7) brightness(0.75);
+    }
+    button {
+      font-size: 1.3em;
+      margin: 0 0.7em;
+      padding: 0.9em 2.3em;
+      border-radius: 2em;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      font-weight: 500;
+    }
+    .on-btn {
+      background: #06d6a0;
+      color: #222;
+      box-shadow: 0 2px 8px 0 rgba(6,214,160,0.2);
+    }
+    .on-btn:hover {
+      background: #40f7cb;
+    }
+    .off-btn {
+      background: #ef476f;
+      color: #fff;
+      box-shadow: 0 2px 8px 0 rgba(239,71,111,0.22);
+    }
+    .off-btn:hover {
+      background: #fa9bb4;
+      color: #222;
+    }
+    .voice-btn {
+      background: #3a86ff;
+      color: #fff;
+      box-shadow: 0 2px 8px 0 rgba(58,134,255,0.22);
+    }
+    .voice-btn:hover {
+      background: #89c2ff;
+    }
+    .footer {
+      margin-top: 2.0em;
+      font-size: 0.95em;
+      color: #bbb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Controlador de Casa Juan</h2>
+    <div class="notification" id="notification"></div>
+    <div class="led-img">
+      <svg id="bulb" class="bulb off" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 62">
+        <ellipse cx="24" cy="24" rx="18" ry="21" fill="#ffe259"/>
+        <ellipse cx="24" cy="27" rx="14" ry="15" fill="#fff59e" opacity="0.8"/>
+        <rect x="18" y="42" width="12" height="12" rx="4" fill="#c7c7c7"/>
+        <rect x="17" y="52" width="14" height="6" rx="3" fill="#bbb"/>
+        <rect x="19" y="55" width="10" height="3" rx="1.5" fill="#999"/>
+      </svg>
+    </div>
+    <div class="led-status" id="ledState">Estado del LED: <b>Desconocido</b></div>
+    <button class="on-btn" onclick="setLed('on')">ENCENDER</button>
+    <button class="off-btn" onclick="setLed('off')">APAGAR</button>
+    <button class="voice-btn" onclick="startVoiceControl()">Control por Voz</button>
+    <div class="footer">
+      © 2025 - Tu Proyecto IoT
+    </div>
+  </div>
+  <script>
+    function showNotification(msg, color) {
+      var note = document.getElementById('notification');
+      note.innerHTML = msg;
+      note.style.display = 'block';
+      note.style.background = color || "#06d6a0";
+      setTimeout(function() {
+        note.style.display = 'none';
+      }, 2000);
+    }
+
+    function setBulb(state) {
+      var bulb = document.getElementById('bulb');
+      if(state === 'on') {
+        bulb.classList.remove('off');
+      } else {
+        bulb.classList.add('off');
+      }
+    }
+
+    function updateStatus(state) {
+      document.getElementById('ledState').innerHTML = "Estado del LED: <b>" + (state === 'on' ? 'ENCENDIDO' : 'APAGADO') + "</b>";
+      setBulb(state);
+    }
+
+    function setLed(action) {
+      fetch('/led?state=' + action)
+        .then(response => response.text())
+        .then(data => {
+          if (data.trim() === 'on') {
+            updateStatus('on');
+            showNotification('¡El LED está ENCENDIDO! 💡', '#06d6a0');
+          } else if (data.trim() === 'off') {
+            updateStatus('off');
+            showNotification('El LED está APAGADO.', '#ef476f');
+          } else {
+            updateStatus('desconocido');
+            showNotification('Estado desconocido...', '#fac748');
+          }
+        })
+        .catch(e => {
+          showNotification('Error de conexión con ESP32', '#505050');
+          updateStatus('desconocido');
+        });
+    }
+
+    function startVoiceControl() {
+      var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition || window.mozSpeechRecognition || window.msSpeechRecognition)();
+      recognition.lang = 'es-ES';
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        var command = event.results[0][0].transcript.toLowerCase().trim();
+        if (command.includes("prende") || command.includes("enciende")) {
+          setLed('on');
+        } else if (command.includes("apaga")) {
+          setLed('off');
+        } else {
+          showNotification('Comando no reconocido', '#fac748');
+        }
+      };
+
+      recognition.onerror = function(event) {
+        showNotification('Error en el reconocimiento de voz: ' + event.error, '#ef476f');
+      };
+    }
+
+    window.onload = function() {
+      fetch('/ledstatus')
+        .then(response => response.text())
+        .then(data => {
+          if (data.trim() === 'on') {
+            updateStatus('on');
+          } else if (data.trim() === 'off') {
+            updateStatus('off');
+          } else {
+            updateStatus('desconocido');
+          }
+        })
+        .catch(e => updateStatus('desconocido'));
+    }
+  </script>
+</body>
+</html>
